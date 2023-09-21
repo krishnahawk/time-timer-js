@@ -5,7 +5,27 @@ let mode = 'time_input';
 // When jquery is ready, show the input
 $(document).ready(() => {
     showInput();
+    // Check if the user has already given permission for notifications
+    askForNotificationPermission();
 });
+
+function askForNotificationPermission() {
+    if (!('Notification' in window)) {
+        // Browser doesn't support notifications
+        return false;
+    }
+    if (Notification.permission === 'granted') {
+        return true;
+    }
+    if (Notification.permission !== 'denied') {
+        // Ask the user for permission
+        Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+                return true;
+            }
+        });
+    }
+}
 
 function showInput() {
     // Hide the task div
@@ -100,11 +120,14 @@ function startTimer(seconds) {
     totalTime = seconds;
     elapsed = 0;
     updateTimerDisplay(1);
+    updateTimerInTitle(1);
+    // notifyUserWhenDone(1);
 
     timer = setInterval(() => {
         elapsed += 1;
         let percentageLeft = 1 - (elapsed / totalTime);
         updateTimerDisplay(percentageLeft);
+        updateTimerInTitle(percentageLeft);
 
         if (elapsed >= totalTime) {
             clearInterval(timer);
@@ -142,6 +165,29 @@ function updateTimerDisplay(percentage) {
 
 }
 
+function updateTimerInTitle(percentage) {
+    if (percentage < 0) {
+        percentage = 0;
+    }
+    let remainingTime = totalTime - elapsed;
+    let minutes = Math.floor(remainingTime / 60);
+    let seconds = remainingTime % 60;
+    // Make sure the seconds are always 2 digits
+    if (seconds < 10) {
+        seconds = `0${seconds}`;
+    }
+    if (remainingTime < 60 && remainingTime > 0) {
+        document.title = `${seconds} - kTimer`;
+        return;
+    }
+    if (remainingTime === 0) {
+        document.title = `Time's up! - kTimer`;
+        return;
+    }
+    document.title = `${minutes}:${seconds} - kTimer`;
+}
+
+
 function timesUp() {
     // Make the timer container background red
     let timerContainer = document.querySelector('.timer-container');
@@ -149,5 +195,27 @@ function timesUp() {
     // Replace the remaining time with "Time's up!"
     let remainingTimeDiv = document.querySelector('.remaining_time');
     remainingTimeDiv.innerHTML = 'Done';
+    notifyUserWhenDone();
     mode = 'times_up';
+}
+function notifyUserWhenDone() {
+    if (!('Notification' in window)) {
+        // Browser doesn't support notifications
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        // Create the notification
+        let notification = new Notification('Time\'s up!');
+        return;
+    }
+    if (Notification.permission !== 'denied') {
+        // Ask the user for permission
+        Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+                // Create the notification
+                let notification = new Notification('Time\'s up!');
+                return;
+            }
+        });
+    }
 }
